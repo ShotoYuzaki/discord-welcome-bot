@@ -68,7 +68,7 @@ class WelcomeBot(commands.Bot):
             1281605174556626994: "https://discord.com/api/webhooks/1410935185268015186/gGX8ofF1J_hiJkQV1s8Tx-AjUtjS1ubqtbXrEMzGc_NRWLG8ZNb4VBPlN55_boewc2AF",
             # Add friend servers here later:
             1411334276531880049: "https://discord.com/api/webhooks/1411334646150725754/C3UHmPoi79H2dQYjujZWxnmj-07cp4_ztHaDa3wb_IIFtAk24CNWsg7CZK21hTrkyYWX",
-            # FRIEND_SERVER_2_ID: "FRIEND_SERVER_2_WEBHOOK_URL",
+            991908158274539681: "https://discord.com/api/webhooks/1345386396600369263/54SNNfhUOaK0oLt6yI2nwlHzNWOnQFFZNRV2HIegGPReYdwIlZ4muqjhzCAArqrSe2xj",
         }
         return webhooks.get(guild_id)
 
