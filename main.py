@@ -167,6 +167,7 @@ class WelcomeBot(commands.Bot):
                     glow = glow.filter(ImageFilter.GaussianBlur(blur_radius))
                     banner.alpha_composite(glow)
                 draw.text(pos, text, font=font, fill=base_color)
+                draw.text((pos[0] + 1, pos[1] + 1), text, font=font, fill=base_color)  # Slight offset for boldness
 
             # --- Create final static frame ---
             frame = bg.copy()
