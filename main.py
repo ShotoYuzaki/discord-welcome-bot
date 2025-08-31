@@ -179,7 +179,7 @@ class WelcomeBot(commands.Bot):
 
             # Neon text
             text_x = 320
-            draw_neon_text(frame, "GREETINGS!", (text_x, 105), title_font,
+            draw_neon_text(frame, "GREETINGS!", (text_x, 100), title_font,
                            base_color=(220, 20, 60), glow_color=(220, 20, 60))
 
             username = member.display_name
