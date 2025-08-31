@@ -163,7 +163,7 @@ class WelcomeBot(commands.Bot):
                 for blur_radius in [10, 6, 3]:
                     glow = Image.new("RGBA", banner.size, (0, 0, 0, 0))
                     glow_draw = ImageDraw.Draw(glow)
-                    glow_draw.text(pos, text, font=font, fill=glow_color + (200,))
+                    glow_draw.text(pos, text, font=font, fill=glow_color + (180,))
                     glow = glow.filter(ImageFilter.GaussianBlur(blur_radius))
                     banner.alpha_composite(glow)
                 
@@ -179,18 +179,18 @@ class WelcomeBot(commands.Bot):
 
             # Neon text
             text_x = 320
-            draw_neon_text(frame, "GREETINGS!", (text_x, 120), title_font,
+            draw_neon_text(frame, "GREETINGS!", (text_x, 118), title_font,
                            base_color=(220, 20, 60), glow_color=(220, 20, 60))
 
             username = member.display_name
-            if len(username) > 15:
-                username = username[:12] + "..."
+            if len(username) > 28:
+                username = username[:25] + "..."
             draw_neon_text(frame, username, (text_x, 190), subtitle_font,
-                           base_color=(255, 255, 255), glow_color=(200, 50, 200))
+                           base_color=(250, 250, 250), glow_color=(200, 50, 200))
 
             member_text = f"Member #{len(member.guild.members)}"
             draw_neon_text(frame, member_text, (text_x, 240), subtitle_font,
-                           base_color=(200, 200, 200), glow_color=(200, 50, 200))
+                           base_color=(180, 180, 180), glow_color=(200, 50, 200))
 
             # Save PNG
             img_buffer = BytesIO()
