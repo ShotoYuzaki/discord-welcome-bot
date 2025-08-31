@@ -131,13 +131,13 @@ class WelcomeBot(commands.Bot):
                     if os.path.exists(font_path):
                         logger.info(f"✅ Font exists: {font_path}")
             
-                            # Try to load the font
-                            title_font = ImageFont.truetype(font_path, 72)  # LARGER: 72 instead of 52
-                            subtitle_font = ImageFont.truetype(font_path, 42)  # LARGER: 42 instead of 30
+                        # Try to load the font
+                        title_font = ImageFont.truetype(font_path, 72)  # LARGER: 72 instead of 52
+                        subtitle_font = ImageFont.truetype(font_path, 42)  # LARGER: 42 instead of 30
             
-                            logger.info(f"🎉 SUCCESS: Loaded font: {font_path}")
-                            font_loaded = True
-                            break
+                        logger.info(f"🎉 SUCCESS: Loaded font: {font_path}")
+                        font_loaded = True
+                        break
                     else:
                         logger.warning(f"❌ Font does NOT exist: {font_path}")
             
