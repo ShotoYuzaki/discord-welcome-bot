@@ -132,7 +132,7 @@ class WelcomeBot(commands.Bot):
                         logger.info(f"✅ Font exists: {font_path}")
             
                         # Try to load the font
-                        title_font = ImageFont.truetype(font_path, 52)  
+                        title_font = ImageFont.truetype(font_path, 55)  
                         subtitle_font = ImageFont.truetype(font_path, 32)  
             
                         logger.info(f"🎉 SUCCESS: Loaded font: {font_path}")
@@ -149,7 +149,7 @@ class WelcomeBot(commands.Bot):
                 logger.error("💥 ALL FONT LOADING ATTEMPTS FAILED!")
                 try:
                     # Try to create a larger default font
-                    title_font = ImageFont.load_default(size=52)
+                    title_font = ImageFont.load_default(size=55)
                     subtitle_font = ImageFont.load_default(size=32)
                     logger.warning("⚠️ Using enlarged default font")
                 except:
@@ -177,18 +177,17 @@ class WelcomeBot(commands.Bot):
 
             # Neon text
             text_x = 320
-            center_y = height // 2
-            draw_neon_text(frame, "GREETINGS!", (text_x, center_y - 60), title_font,
+            draw_neon_text(frame, "GREETINGS!", (text_x, 110), title_font,
                            base_color=(220, 20, 60), glow_color=(220, 20, 60))
 
             username = member.display_name
             if len(username) > 15:
                 username = username[:12] + "..."
-            draw_neon_text(frame, username, (text_x, center_y - 10), subtitle_font,
+            draw_neon_text(frame, username, (text_x, 190), subtitle_font,
                            base_color=(255, 255, 255), glow_color=(200, 50, 200))
 
             member_text = f"Member #{len(member.guild.members)}"
-            draw_neon_text(frame, member_text, (text_x, center_y + 40), subtitle_font,
+            draw_neon_text(frame, member_text, (text_x, 240), subtitle_font,
                            base_color=(200, 200, 200), glow_color=(200, 50, 200))
 
             # Save PNG
