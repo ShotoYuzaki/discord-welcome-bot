@@ -113,29 +113,50 @@ class WelcomeBot(commands.Bot):
             avatar_x = 80
             avatar_y = (height - avatar_size) // 2
 
-            # Font loading - use fonts that exist on Railway
+            # FONT LOADING - DEBUGGING VERSION
             font_paths = [
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",  # Most likely available
-                "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",  # Alternative
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+                "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
             ]
 
             title_font = subtitle_font = None
+            font_loaded = False
+
             for font_path in font_paths:
                 try:
+                    logger.info(f"Trying font path: {font_path}")
+        
+                    # Check if file exists
                     if os.path.exists(font_path):
-                        title_font = ImageFont.truetype(font_path, 52)
-                        subtitle_font = ImageFont.truetype(font_path, 30)
-                        logger.info(f"Successfully loaded font: {font_path}")
-                        break
+                        logger.info(f"✅ Font exists: {font_path}")
+            
+                            # Try to load the font
+                            title_font = ImageFont.truetype(font_path, 72)  # LARGER: 72 instead of 52
+                            subtitle_font = ImageFont.truetype(font_path, 42)  # LARGER: 42 instead of 30
+            
+                            logger.info(f"🎉 SUCCESS: Loaded font: {font_path}")
+                            font_loaded = True
+                            break
+                    else:
+                        logger.warning(f"❌ Font does NOT exist: {font_path}")
+            
                 except Exception as e:
-                    logger.warning(f"Failed to load font {font_path}: {e}")
+                    logger.error(f"💥 FAILED to load font {font_path}: {e}")
                     continue
 
-            if not title_font:
-                # Ultimate fallback to default font
-                title_font = ImageFont.load_default()
-                subtitle_font = ImageFont.load_default()
-                logger.warning("Using default font - text will be small")
+            if not font_loaded:
+                logger.error("💥 ALL FONT LOADING ATTEMPTS FAILED!")
+                try:
+                    # Try to create a larger default font
+                    title_font = ImageFont.load_default(size=72)
+                    subtitle_font = ImageFont.load_default(size=42)
+                    logger.warning("⚠️ Using enlarged default font")
+                except:
+                    # Absolute last resort
+                    title_font = ImageFont.load_default()
+                    subtitle_font = ImageFont.load_default()
+                    logger.error("💥 Using tiny default font")
 
             def draw_neon_text(banner, text, pos, font, base_color=(255, 255, 255), glow_color=(220, 20, 60)):
                 draw = ImageDraw.Draw(banner)
@@ -155,17 +176,17 @@ class WelcomeBot(commands.Bot):
 
             # Neon text
             text_x = 320
-            draw_neon_text(frame, "GREETINGS!", (text_x, 120), title_font,
+            draw_neon_text(frame, "GREETINGS!", (text_x, 80), title_font,
                            base_color=(220, 20, 60), glow_color=(220, 20, 60))
 
             username = member.display_name
-            if len(username) > 20:
-                username = username[:17] + "..."
-            draw_neon_text(frame, username, (text_x, 190), subtitle_font,
+            if len(username) > 15:
+                username = username[:12] + "..."
+            draw_neon_text(frame, username, (text_x, 160), subtitle_font,
                            base_color=(255, 255, 255), glow_color=(200, 50, 200))
 
             member_text = f"Member #{len(member.guild.members)}"
-            draw_neon_text(frame, member_text, (text_x, 240), subtitle_font,
+            draw_neon_text(frame, member_text, (text_x, 210), subtitle_font,
                            base_color=(200, 200, 200), glow_color=(200, 50, 200))
 
             # Save PNG
