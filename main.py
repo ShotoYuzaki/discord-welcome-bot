@@ -62,13 +62,9 @@ class WelcomeBot(commands.Bot):
 
     async def get_webhook_for_guild(self, guild_id):
         """Get webhook URL for a specific server"""
-        # Dictionary of server IDs to webhook URLs
         webhooks = {
-            # Your main server - replace with your actual webhook URL
             1281605174556626994: "https://discord.com/api/webhooks/1410935185268015186/gGX8ofF1J_hiJkQV1s8Tx-AjUtjS1ubqtbXrEMzGc_NRWLG8ZNb4VBPlN55_boewc2AF",
-            # Add friend servers here later:
             1411334276531880049: "https://discord.com/api/webhooks/1411334646150725754/C3UHmPoi79H2dQYjujZWxnmj-07cp4_ztHaDa3wb_IIFtAk24CNWsg7CZK21hTrkyYWX",
-            # FRIEND_SERVER_2_ID: "FRIEND_SERVER_2_WEBHOOK_URL",
         }
         return webhooks.get(guild_id)
 
@@ -84,7 +80,7 @@ class WelcomeBot(commands.Bot):
         )
 
     def create_welcome_banner(self, member):
-        """Create a static crimson neon welcome banner"""
+        """Create a static crimson welcome banner (no glow)"""
         try:
             # Download avatar
             avatar_response = requests.get(str(member.display_avatar.with_size(512).url))
@@ -93,7 +89,7 @@ class WelcomeBot(commands.Bot):
             # Banner size
             width, height = 800, 400
 
-            # Background: blurred avatar zoom (reduced blur from 25 → 10)
+            # Background: blurred avatar zoom
             bg = avatar_img.resize((width, height), Image.Resampling.LANCZOS)
             bg = bg.filter(ImageFilter.GaussianBlur(10))
             overlay = Image.new("RGBA", (width, height), (0, 0, 0, 120))
@@ -113,7 +109,7 @@ class WelcomeBot(commands.Bot):
             avatar_x = 80
             avatar_y = (height - avatar_size) // 2
 
-            # FONT LOADING - DEBUGGING VERSION
+            # FONT LOADING
             font_paths = [
                 "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
                 "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
@@ -125,69 +121,41 @@ class WelcomeBot(commands.Bot):
 
             for font_path in font_paths:
                 try:
-                    logger.info(f"Trying font path: {font_path}")
-        
-                    # Check if file exists
                     if os.path.exists(font_path):
-                        logger.info(f"✅ Font exists: {font_path}")
-            
-                        # Try to load the font
-                        title_font = ImageFont.truetype(font_path, 72)  # LARGER: 72 instead of 52
-                        subtitle_font = ImageFont.truetype(font_path, 42)  # LARGER: 42 instead of 30
-            
-                        logger.info(f"🎉 SUCCESS: Loaded font: {font_path}")
+                        title_font = ImageFont.truetype(font_path, 80)   # Bigger title
+                        subtitle_font = ImageFont.truetype(font_path, 45) # Bigger subtitle
                         font_loaded = True
                         break
-                    else:
-                        logger.warning(f"❌ Font does NOT exist: {font_path}")
-            
-                except Exception as e:
-                    logger.error(f"💥 FAILED to load font {font_path}: {e}")
+                except Exception:
                     continue
 
             if not font_loaded:
-                logger.error("💥 ALL FONT LOADING ATTEMPTS FAILED!")
-                try:
-                    # Try to create a larger default font
-                    title_font = ImageFont.load_default(size=72)
-                    subtitle_font = ImageFont.load_default(size=42)
-                    logger.warning("⚠️ Using enlarged default font")
-                except:
-                    # Absolute last resort
-                    title_font = ImageFont.load_default()
-                    subtitle_font = ImageFont.load_default()
-                    logger.error("💥 Using tiny default font")
+                title_font = ImageFont.load_default()
+                subtitle_font = ImageFont.load_default()
 
-            def draw_neon_text(banner, text, pos, font, base_color=(255, 255, 255), glow_color=(220, 20, 60)):
+            def draw_clean_text(banner, text, pos, font, fill=(255, 255, 255)):
                 draw = ImageDraw.Draw(banner)
-                for blur_radius in [8, 4]:
-                    glow = Image.new("RGBA", banner.size, (0, 0, 0, 0))
-                    glow_draw = ImageDraw.Draw(glow)
-                    glow_draw.text(pos, text, font=font, fill=glow_color + (180,))
-                    glow = glow.filter(ImageFilter.GaussianBlur(blur_radius))
-                    banner.alpha_composite(glow)
-                draw.text(pos, text, font=font, fill=base_color)
+                draw.text(pos, text, font=font, fill=fill)
 
             # --- Create final static frame ---
             frame = bg.copy()
 
-            # Paste avatar directly (no glow ring)
+            # Paste avatar
             frame.paste(circular_avatar, (avatar_x, avatar_y), circular_avatar)
 
-            # Neon text
+            # Title (sharp crimson red, no glow)
             text_x = 320
-            draw_neon_text(frame, "GREETINGS!", (text_x, 80), title_font,
-                           base_color=(220, 20, 60), glow_color=(220, 20, 60))
+            draw_clean_text(frame, "GREETINGS!", (text_x, 90), title_font, fill=(255, 0, 60))
 
+            # Username (white)
             username = member.display_name
             if len(username) > 15:
                 username = username[:12] + "..."
-            draw_neon_text(frame, username, (text_x, 160), subtitle_font,
-                           base_color=(255, 255, 255), glow_color=(200, 50, 200))
+            draw_clean_text(frame, username, (text_x, 170), subtitle_font, fill=(255, 255, 255))
 
+            # Member number (greyish)
             member_text = f"Member #{len(member.guild.members)}"
-            draw_neon_text(frame, member_text, (text_x, 210), subtitle_font,
-                           base_color=(200, 200, 200), glow_color=(200, 50, 200))
+            draw_clean_text(frame, member_text, (text_x, 220), subtitle_font, fill=(200, 200, 200))
 
             # Save PNG
             img_buffer = BytesIO()
@@ -202,7 +170,6 @@ class WelcomeBot(commands.Bot):
     async def on_member_join(self, member):
         logger.info(f"on_member_join fired for {member.display_name} in {member.guild.name}")
         try:
-            # Get the webhook URL for this specific server
             webhook_url = await self.get_webhook_for_guild(member.guild.id)
             if not webhook_url:
                 logger.warning(f"No webhook configured for server: {member.guild.name}")
@@ -213,21 +180,18 @@ class WelcomeBot(commands.Bot):
             embed = {
                 "title": "👋 Welcome to the server!",
                 "description": message,
-                "color": 0xDC143C,  # 🔴 Crimson side panel
+                "color": 0xDC143C,
                 "footer": {
                     "text": f"Joined {datetime.utcnow().strftime('%B %d, %Y')}",
                     "icon_url": str(member.guild.icon.url) if member.guild.icon else None
                 },
                 "timestamp": datetime.utcnow().isoformat()
             }
-            # Send with the specific webhook URL for this server
             await self.send_welcome_webhook(embed, member, member.mention, webhook_url)
         except Exception as e:
             logger.error(f"Error in on_member_join: {e}")
 
     async def send_welcome_webhook(self, embed, member, mention_text=None, webhook_url=None):
-        """Send webhook with custom webhook URL"""
-        # Use provided webhook URL or fall back to default
         if webhook_url is None:
             webhook_url = self.config.webhook_url
             
@@ -237,22 +201,21 @@ class WelcomeBot(commands.Bot):
                 banner_buffer.seek(0)
                 form_data = aiohttp.FormData()
                 form_data.add_field('payload_json', json.dumps({
-                    "content": mention_text,  # ← MENTION GOES HERE (outside embed)
+                    "content": mention_text,
                     "embeds": [{**embed, "image": {"url": "attachment://welcome_banner.png"}}]
                 }))
                 form_data.add_field('file', banner_buffer.read(), filename='welcome_banner.png', content_type='image/png')
-                async with self.session.post(webhook_url, data=form_data) as response:  # ← Use the specific webhook URL
+                async with self.session.post(webhook_url, data=form_data) as response:
                     if response.status in (200, 204):
                         logger.info(f"Welcome message + banner sent for {member.display_name} in {member.guild.name}")
                     else:
                         logger.error(f"Failed to send webhook with banner: {response.status}")
             else:
-                # fallback (no banner)
                 webhook_data = {
-                    "content": mention_text,  # ← MENTION GOES HERE (outside embed)
+                    "content": mention_text,
                     "embeds": [embed]
                 }
-                async with self.session.post(webhook_url, json=webhook_data) as response:  # ← Use the specific webhook URL
+                async with self.session.post(webhook_url, json=webhook_data) as response:
                     if response.status in (200, 204):
                         logger.info(f"Welcome message (no banner) sent for {member.display_name} in {member.guild.name}")
                     else:
@@ -274,7 +237,7 @@ async def test_welcome(ctx):
     embed = {
         "title": "Test Welcome Message",
         "description": "This is a test!",
-        "color": 0xDC143C,  # 🔴 Crimson side panel
+        "color": 0xDC143C,
         "thumbnail": {"url": str(ctx.author.display_avatar.url)},
         "footer": {
             "text": f"Test • Member #{len(ctx.guild.members)}",
@@ -282,10 +245,9 @@ async def test_welcome(ctx):
         },
         "timestamp": datetime.utcnow().isoformat()
     }
-    # Get webhook for this server
     webhook_url = await bot.get_webhook_for_guild(ctx.guild.id)
     if not webhook_url:
-        webhook_url = bot.config.webhook_url  # Fallback to default
+        webhook_url = bot.config.webhook_url  
     
     await bot.send_welcome_webhook(embed, ctx.author, ctx.author.mention, webhook_url)
     await ctx.message.delete()
