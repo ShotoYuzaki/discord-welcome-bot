@@ -113,55 +113,29 @@ class WelcomeBot(commands.Bot):
             avatar_x = 80
             avatar_y = (height - avatar_size) // 2
 
-           # Fonts - Use local font file with debug logging and download fallback
-           font_path = "fonts/Roboto-Bold.ttf"
+            # Font loading - use fonts that exist on Railway
+            font_paths = [
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",  # Most likely available
+                "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",  # Alternative
+            ]
 
-           # First, try to download font if it doesn't exist
-           if not os.path.exists(font_path):
-               try:
-                   logger.info("Downloading Roboto font...")
-                   os.makedirs("fonts", exist_ok=True)
-                   url = "https://github.com/googlefonts/roboto/raw/main/src/hinted/Roboto-Bold.ttf"
-                   response = requests.get(url)
-                   with open(font_path, "wb") as f:
-                       f.write(response.content)
-                   logger.info("Font downloaded successfully!")
-               except Exception as e:
-                   logger.error(f"Failed to download font: {e}")
+            title_font = subtitle_font = None
+            for font_path in font_paths:
+                try:
+                    if os.path.exists(font_path):
+                        title_font = ImageFont.truetype(font_path, 52)
+                        subtitle_font = ImageFont.truetype(font_path, 30)
+                        logger.info(f"Successfully loaded font: {font_path}")
+                        break
+                except Exception as e:
+                    logger.warning(f"Failed to load font {font_path}: {e}")
+                    continue
 
-           # Now try to load the font
-           try:
-               logger.info(f"Attempting to load font from: {font_path}")
-    
-               if os.path.exists(font_path):
-                   logger.info(f"Font file exists at: {font_path}")
-                   title_font = ImageFont.truetype(font_path, 52)
-                   subtitle_font = ImageFont.truetype(font_path, 30)
-                   logger.info("Successfully loaded Roboto font!")
-               else:
-                   logger.warning(f"Font file does NOT exist at: {font_path}")
-                   raise FileNotFoundError(f"Font not found: {font_path}")
-        
-           except Exception as e:
-               logger.warning(f"Could not load custom font: {e}")
-               # Fallback to system fonts
-               font_paths = [
-                   "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-                   "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-               ]
-               title_font = subtitle_font = None
-               for font_path in font_paths:
-                   try:
-                       if os.path.exists(font_path):
-                           title_font = ImageFont.truetype(font_path, 52)
-                           subtitle_font = ImageFont.truetype(font_path, 30)
-                           break
-                   except:
-                       continue
-               if not title_font:
-                   # Ultimate fallback to default font
-                   title_font = ImageFont.load_default()
-                   subtitle_font = ImageFont.load_default()
+            if not title_font:
+                # Ultimate fallback to default font
+                title_font = ImageFont.load_default()
+                subtitle_font = ImageFont.load_default()
+                logger.warning("Using default font - text will be small")
 
             def draw_neon_text(banner, text, pos, font, base_color=(255, 255, 255), glow_color=(220, 20, 60)):
                 draw = ImageDraw.Draw(banner)
