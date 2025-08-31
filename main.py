@@ -160,14 +160,16 @@ class WelcomeBot(commands.Bot):
 
             def draw_neon_text(banner, text, pos, font, base_color=(255, 255, 255), glow_color=(220, 20, 60)):
                 draw = ImageDraw.Draw(banner)
-                for blur_radius in [8, 4]:
+                for blur_radius in [10, 6, 3]:
                     glow = Image.new("RGBA", banner.size, (0, 0, 0, 0))
                     glow_draw = ImageDraw.Draw(glow)
-                    glow_draw.text(pos, text, font=font, fill=glow_color + (180,))
+                    glow_draw.text(pos, text, font=font, fill=glow_color + (200,))
                     glow = glow.filter(ImageFilter.GaussianBlur(blur_radius))
                     banner.alpha_composite(glow)
-                draw.text(pos, text, font=font, fill=base_color)
-                draw.text((pos[0] + 1, pos[1] + 1), text, font=font, fill=base_color)  # Slight offset for boldness
+                
+                offsets = [(0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)]
+                for offset_x, offset_y in offsets:
+                    draw.text((pos[0] + offset_x, pos[1] + offset_y), text, font=font, fill=base_color)  # Slight offset for boldness
 
             # --- Create final static frame ---
             frame = bg.copy()
@@ -177,7 +179,7 @@ class WelcomeBot(commands.Bot):
 
             # Neon text
             text_x = 320
-            draw_neon_text(frame, "GREETINGS!", (text_x, 110), title_font,
+            draw_neon_text(frame, "GREETINGS!", (text_x, 105), title_font,
                            base_color=(220, 20, 60), glow_color=(220, 20, 60))
 
             username = member.display_name
