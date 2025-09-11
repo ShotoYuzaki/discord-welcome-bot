@@ -34,11 +34,11 @@ class Config:
 
 # Custom welcome messages
 WELCOME_MESSAGES = [
-   "Welcome! Glad you made it here!",
-   "Yo! Welcome to our server!",
-   "LET'S GOOO! Has joined the gang!",
-   "It's so good to have you here!",
-   "Welcome! Great to have you here!"
+   "Welcome! {mention} glad you made it here!",
+   "Yo {mention}! Welcome to our server!",
+   "LET'S GOOO! {mention} has joined the gang!",
+   "It's so good to have you here {mention}!",
+   "Welcome {mention}! Great to have you here!"
 ]
 
 class WelcomeBot(commands.Bot):
@@ -223,7 +223,7 @@ class WelcomeBot(commands.Bot):
                 "timestamp": datetime.utcnow().isoformat()
             }
             # Send with the specific webhook URL for this server
-            await self.send_welcome_webhook(embed, member, member.mention, webhook_url)
+            await self.send_welcome_webhook(embed, member, None, webhook_url)
         except Exception as e:
             logger.error(f"Error in on_member_join: {e}")
 
@@ -238,23 +238,25 @@ class WelcomeBot(commands.Bot):
             if banner_buffer:
                 banner_buffer.seek(0)
                 form_data = aiohttp.FormData()
-                form_data.add_field('payload_json', json.dumps({
-                    "content": mention_text,  # ← MENTION GOES HERE (outside embed)
-                    "embeds": [{**embed, "image": {"url": "attachment://welcome_banner.png"}}]
-                }))
+                # Only include mention_text if it's provided
+                payload = {"embeds": [{**embed, "image": {"url": "attachment://welcome_banner.png"}}]}
+                if mention_text:
+                    payload["content"] = mention_text
+                    
+                form_data.add_field('payload_json', json.dumps(payload))
                 form_data.add_field('file', banner_buffer.read(), filename='welcome_banner.png', content_type='image/png')
-                async with self.session.post(webhook_url, data=form_data) as response:  # ← Use the specific webhook URL
+                async with self.session.post(webhook_url, data=form_data) as response:
                     if response.status in (200, 204):
                         logger.info(f"Welcome message + banner sent for {member.display_name} in {member.guild.name}")
                     else:
                         logger.error(f"Failed to send webhook with banner: {response.status}")
             else:
                 # fallback (no banner)
-                webhook_data = {
-                    "content": mention_text,  # ← MENTION GOES HERE (outside embed)
-                    "embeds": [embed]
-                }
-                async with self.session.post(webhook_url, json=webhook_data) as response:  # ← Use the specific webhook URL
+                webhook_data = {"embeds": [embed]}
+                if mention_text:
+                    webhook_data["content"] = mention_text
+                    
+                async with self.session.post(webhook_url, json=webhook_data) as response:
                     if response.status in (200, 204):
                         logger.info(f"Welcome message (no banner) sent for {member.display_name} in {member.guild.name}")
                     else:
