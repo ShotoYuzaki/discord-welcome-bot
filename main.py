@@ -36,7 +36,7 @@ class Config:
 WELCOME_MESSAGES = [
    "Welcome! {mention} glad you made it here!",
    "Yo {mention}! Welcome to our server!",
-   "LET'S GOOO! {mention} has joined the gang!",
+   "Let's gooo! {mention} has joined the gang!",
    "It's so good to have you here {mention}!",
    "Welcome {mention}! Great to have you here!"
 ]
@@ -223,7 +223,7 @@ class WelcomeBot(commands.Bot):
                 "timestamp": datetime.utcnow().isoformat()
             }
             # Send with the specific webhook URL for this server
-            await self.send_welcome_webhook(embed, member, None, webhook_url)
+            await self.send_welcome_webhook(embed, member, mention_text=member.mention, webhook_url=webhook_url)
         except Exception as e:
             logger.error(f"Error in on_member_join: {e}")
 
@@ -291,7 +291,7 @@ async def test_welcome(ctx):
     if not webhook_url:
         webhook_url = bot.config.webhook_url  # Fallback to default
     
-    await bot.send_welcome_webhook(embed, ctx.author, ctx.author.mention, webhook_url)
+    await bot.send_welcome_webhook(embed, ctx.author, mention_text=ctx.author.mention, webhook_url=webhook_url)
     await ctx.message.delete()
 
 def main():
