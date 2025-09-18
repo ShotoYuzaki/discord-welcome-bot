@@ -121,10 +121,8 @@ class WelcomeBot(commands.Bot):
             await self.tree.sync()
             logger.info("Slash commands synced.")
         except Exception as e:
-<<<<<<< HEAD
             logger.warning(f"Failed to auto-sync slash commands: {e}")
         logger.info("Bot setup complete.")
-=======
             logger.error(f"Error creating welcome banner: {e}")
             return None
 
@@ -190,16 +188,13 @@ class WelcomeBot(commands.Bot):
                         logger.error(f"Failed to send webhook: {response.status}")
         except Exception as e:
             logger.error(f"Error sending webhook: {e}")
->>>>>>> 415cb5d6bad12a5f580af2c014ae3a6df359cee3
 
     async def close(self):
         if self.session:
             await self.session.close()
         await super().close()
 
-<<<<<<< HEAD
 bot = WelcomeBot()
-=======
 # ✅ Test command
 @commands.command(name='test_welcome')
 @commands.has_permissions(administrator=True)
@@ -224,7 +219,6 @@ async def test_welcome(ctx):
     
     await bot.send_welcome_webhook(embed, ctx.author, mention_text=ctx.author.mention, webhook_url=webhook_url)
     await ctx.message.delete()
->>>>>>> 415cb5d6bad12a5f580af2c014ae3a6df359cee3
 
 # -----------------------
 # Banner generator (IDENTICAL to your original function)
