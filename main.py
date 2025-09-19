@@ -419,6 +419,7 @@ def build_embed_from_data(data: dict, image_url: str = None):
     )
     
     # Set image if provided
+    
     if image_url:
         embed.set_image(url=image_url)
     
@@ -516,7 +517,6 @@ async def process_create_embed(interaction: discord.Interaction, data: dict):
     channel="Channel to send the embed to",
     color="Color (hex like #ff00aa or name)",
     thumbnail_url="Thumbnail image URL (optional)",
-    image_url="Main image URL (optional)",
     author_name="Author name (optional)",
     author_icon_url="Author icon URL (optional)",
     footer_icon_url="Footer icon URL (optional)",
@@ -725,6 +725,7 @@ async def edit_embed(interaction: discord.Interaction, message_id: str, embed_in
 # Help
 
 @bot.tree.command(name="help", description="Show help guide for using this bot")
+@app_commands.checks.has_permissions(administrator=True)
 async def help_command(interaction: discord.Interaction):
     """Display a comprehensive help guide for all bot commands"""
     
@@ -794,36 +795,10 @@ async def help_command(interaction: discord.Interaction):
         inline=False
     )
     
-    # Examples
-    help_embed.add_field(
-        name="📝 Examples",
-        value=(
-            "**Welcome message:** `Welcome {mention} to {server}!`\n"
-            "**Image URLs:** `https://example.com/image1.jpg` (one per line)\n"
-            "**Mention in content:** `@User check this out!`\n"
-            "**Mention in embed:** `<@123456789012345678>`"
-        ),
-        inline=False
-    )
-    
     help_embed.set_footer(text="Need more help? Contact the server administrators")
     
     await interaction.response.send_message(embed=help_embed, ephemeral=True)
 
-# Optional: Add a simple help command for text too
-@bot.tree.command(name="quickhelp", description="Short help summary")
-async def quick_help(interaction: discord.Interaction):
-    """Short help summary"""
-    quick_help = """
-**🤖 Quick Commands:**
-• `/add_welcome` - Add welcome message
-• `/create_embed` - Create image embeds  
-• `/edit_embed` - Edit existing embeds
-• `/help` - Full detailed guide
-
-**🔧 Admin only:** Welcome commands and embed creation
-"""
-    await interaction.response.send_message(quick_help, ephemeral=True)
 # -----------------------
 # Run
 # -----------------------
@@ -839,6 +814,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
