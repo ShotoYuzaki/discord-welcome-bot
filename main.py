@@ -150,9 +150,9 @@ def create_welcome_banner(member: discord.Member):
         avatar_y = (height - avatar_size) // 2
 
         font_paths = [
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-            "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
+        "fonts/DejaVuSans-Bold.ttf",  # Your local font file
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",  # Keep as backup
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
         ]
 
         title_font = subtitle_font = None
@@ -564,6 +564,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
