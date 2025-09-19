@@ -132,7 +132,7 @@ def create_welcome_banner(member: discord.Member):
 
         width, height = 800, 400
         bg = avatar_img.resize((width, height), Image.Resampling.LANCZOS)
-        bg = bg.filter(ImageFilter.GaussianBlur(10))
+        bg = bg.filter(ImageFilter.GaussianBlur(15))
         overlay = Image.new("RGBA", (width, height), (0, 0, 0, 120))
         bg.paste(overlay, (0, 0), overlay)
 
@@ -272,7 +272,7 @@ async def remove_welcome(interaction: discord.Interaction, index: int):
     removed = msgs.pop(index-1)
     welcome_messages[guild_id] = msgs
     save_json(WELCOME_FILE, welcome_messages)
-    await interaction.response.send_message(f"🗑 Removed: `{removed}`", ephemeral=True)
+    await interaction.response.send_message(f"Removed: `{removed}`", ephemeral=True)
 
 @bot.tree.command(name="edit_welcome", description="Edit a welcome message by index (admin only)")
 @app_commands.checks.has_permissions(administrator=True)
@@ -784,6 +784,58 @@ async def edit_embed(interaction: discord.Interaction, message_id: str, embed_in
         logger.exception("Failed to edit embed")
         await interaction.response.send_message("❌ Failed to edit embed. See logs.", ephemeral=True)
 
+# DM 
+
+@bot.tree.command(name="dm", description="Send a DM to a member (admin only)")
+@app_commands.checks.has_permissions(administrator=True)
+@app_commands.describe(
+    member="The member to DM",
+    message="The plain text message (optional)",
+    title="Embed title (optional)",
+    description="Embed description (optional)",
+    image_url="Image URL for embed (optional)",
+    color="Embed color (optional)"
+)
+async def dm_combined(interaction: discord.Interaction, member: discord.Member, 
+                     message: str = None, title: str = None, 
+                     description: str = None, image_url: str = None, color: str = None):
+    try:
+        if not message and not title and not description and not image_url:
+            await interaction.response.send_message("❌ Need either a message, embed content, or image", ephemeral=True)
+            return
+        
+        # Validate image URL if provided
+        if image_url and image_url != "clear":
+            if not (image_url.startswith("http://") or image_url.startswith("https://")):
+                await interaction.response.send_message("❌ Image URL must start with http:// or https://", ephemeral=True)
+                return
+            
+        if title or description or image_url:
+            # Send embed (with optional text and image)
+            embed = discord.Embed(
+                title=title or None,
+                description=description or None,
+                color=parse_color(color),
+                timestamp=datetime.utcnow()
+            )
+            
+            # Add image if provided
+            if image_url and image_url != "clear":
+                embed.set_image(url=image_url)
+                
+            embed.set_footer(text=f"From {interaction.guild.name}")
+            await member.send(content=message, embed=embed)
+        else:
+            # Send plain text only
+            await member.send(message)
+            
+        await interaction.response.send_message(f"✅ DM sent to {member.mention}", ephemeral=True)
+    except discord.Forbidden:
+        await interaction.response.send_message("❌ Cannot send DM (user has DMs disabled or blocked the bot)", ephemeral=True)
+    except Exception as e:
+        logger.error(f"Failed to send DM: {e}")
+        await interaction.response.send_message("❌ Failed to send DM. See logs.", ephemeral=True)
+
 # Help
 
 @bot.tree.command(name="help", description="Show help guide for using this bot")
@@ -792,8 +844,8 @@ async def help_command(interaction: discord.Interaction):
     """Display a comprehensive help guide for all bot commands"""
     
     help_embed = discord.Embed(
-        title="🤖 Welcome Bot Help Guide",
-        description="Here's how to use all the features of this bot:",
+        title="🗿 Enchanted Man Guide",
+        description="Here's how to use all the features of mine:",
         color=0xDC143C
     )
     
@@ -856,7 +908,7 @@ async def help_command(interaction: discord.Interaction):
         inline=False
     )
     
-    help_embed.set_footer(text="Need more help? Contact the server administrators")
+    help_embed.set_footer(text="Need more help? Contact the server administrators.")
     
     await interaction.response.send_message(embed=help_embed, ephemeral=True)
 
@@ -875,6 +927,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
