@@ -69,7 +69,7 @@ sent_embeds = load_json(SENT_EMBEDS_FILE, {})
 # -----------------------
 WELCOME_CHANNELS = {
     1281605174556626994: 1410934962412195922,  # Guild A -> Channel A (My Server)
-    991908158274539681: 991943909565550643,   # Guild B -> Channel B (Enchanted Squad)
+    #991908158274539681: 991943909565550643,   # Guild B -> Channel B (Enchanted Squad)
 }
 
 def get_welcome_channel_id(guild_id: int):
@@ -580,3 +580,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
