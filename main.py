@@ -169,15 +169,13 @@ def create_welcome_banner(member: discord.Member):
 
         def draw_neon_text(banner, text, pos, font, base_color=(255,255,255), glow_color=(220,20,60)):
             draw = ImageDraw.Draw(banner)
-            for blur_radius in [10,6,3]:
+            for blur_radius in [5]:
                 glow = Image.new("RGBA", banner.size, (0,0,0,0))
                 glow_draw = ImageDraw.Draw(glow)
-                glow_draw.text(pos, text, font=font, fill=glow_color + (180,))
+                glow_draw.text(pos, text, font=font, fill=glow_color + (120,))
                 glow = glow.filter(ImageFilter.GaussianBlur(blur_radius))
                 banner.alpha_composite(glow)
-            offsets = [(0,0),(1,0),(-1,0),(0,1),(0,-1)]
-            for ox,oy in offsets:
-                draw.text((pos[0]+ox,pos[1]+oy), text, font=font, fill=base_color)
+                draw.text(pos, text, font=font, fill=base_color)
 
         frame = bg.copy()
         frame.paste(circular_avatar, (avatar_x, avatar_y), circular_avatar)
@@ -564,6 +562,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
