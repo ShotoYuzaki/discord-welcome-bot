@@ -87,10 +87,10 @@ DEFAULT_MESSAGES = [
 ]
 
 def get_guild_messages(guild_id: int):
-    msgs = welcome_messages.get(str(guild_id))
-    if not msgs:
-        return DEFAULT_MESSAGES.copy()
-    return msgs
+    guild_id_str = str(guild_id)
+    if guild_id_str in welcome_messages and welcome_messages[guild_id_str]:
+        return welcome_messages[guild_id_str].copy()  # Return a copy to avoid modification
+    return DEFAULT_MESSAGES.copy()  # Always return a copy of defaults
 
 # -----------------------
 # Bot
@@ -243,8 +243,10 @@ async def on_member_join(member: discord.Member):
 @app_commands.checks.has_permissions(administrator=True)
 async def add_welcome(interaction: discord.Interaction, message: str):
     guild_id = str(interaction.guild.id)
-    welcome_messages.setdefault(guild_id, get_guild_messages(interaction.guild.id))
-    welcome_messages[guild_id].append(message)
+    # Get current messages or create empty list if none exist
+    current_messages = welcome_messages.get(guild_id, [])
+    current_messages.append(message)
+    welcome_messages[guild_id] = current_messages
     save_json(WELCOME_FILE, welcome_messages)
     await interaction.response.send_message("✅ Welcome message added.", ephemeral=True)
 
@@ -292,52 +294,74 @@ async def edit_welcome(interaction: discord.Interaction, index: int, new_text: s
 @bot.tree.command(name="test_welcome", description="Send a test welcome message to the configured welcome channel (admin only)")
 @app_commands.checks.has_permissions(administrator=True)
 async def test_welcome(interaction: discord.Interaction, member: discord.Member = None):
-    member = member or interaction.user
-    guild = interaction.guild
-    channel_id = get_welcome_channel_id(guild.id)
-    if not channel_id:
-        await interaction.response.send_message("❌ No welcome channel configured in the code. Add it to WELCOME_CHANNELS variable.", ephemeral=True)
-        return
-    channel = guild.get_channel(channel_id)
-    if not channel:
-        await interaction.response.send_message("❌ Configured welcome channel not found in this server.", ephemeral=True)
-        return
+    # Defer the response immediately to avoid the timeout
+    await interaction.response.defer(ephemeral=True, thinking=True)
+    
+    try:
+        member = member or interaction.user
+        guild = interaction.guild
+        channel_id = get_welcome_channel_id(guild.id)
+        if not channel_id:
+            await interaction.followup.send("❌ No welcome channel configured in the code. Add it to WELCOME_CHANNELS variable.", ephemeral=True)
+            return
+        channel = guild.get_channel(channel_id)
+        if not channel:
+            await interaction.followup.send("❌ Configured welcome channel not found in this server.", ephemeral=True)
+            return
 
-    msgs = get_guild_messages(guild.id)
-    template = random.choice(msgs)
-    content_mention = template.format(mention=member.mention, username=member.name, server=guild.name)
+        # Use the same flow as on_member_join but with specified member
+        msgs = get_guild_messages(guild.id)
+        template = random.choice(msgs)
+        content_mention = template.format(mention=member.mention, username=member.name, server=guild.name)
 
-    embed = discord.Embed(
-        title="👋 Test Welcome",
-        description=content_mention,
-        color=0xDC143C,
-        timestamp=datetime.utcnow()
-    )
-    embed.set_footer(text=f"Test • {datetime.utcnow().strftime('%B %d, %Y')}",
-                     icon_url=str(guild.icon.url) if guild.icon else None)
+        embed = discord.Embed(
+            title="👋 Test Welcome",
+            description=content_mention,
+            color=0xDC143C,
+            timestamp=datetime.utcnow()
+        )
+        embed.set_footer(text=f"Test • {datetime.utcnow().strftime('%B %d, %Y')}",
+                         icon_url=str(guild.icon.url) if guild.icon else None)
 
-    banner_buffer = create_welcome_banner(member)
-    if banner_buffer:
-        file = File(banner_buffer, filename="welcome_banner.png")
-        embed.set_image(url="attachment://welcome_banner.png")
-        await channel.send(content=member.mention, embed=embed, file=file)
-    else:
-        await channel.send(content=member.mention, embed=embed)
+        banner_buffer = create_welcome_banner(member)
+        if banner_buffer:
+            file = File(banner_buffer, filename="welcome_banner.png")
+            embed.set_image(url="attachment://welcome_banner.png")
+            await channel.send(content=member.mention, embed=embed, file=file)
+        else:
+            await channel.send(content=member.mention, embed=embed)
 
-    await interaction.response.send_message("✅ Test welcome sent.", ephemeral=True)
+        await interaction.followup.send("✅ Test welcome sent.", ephemeral=True)
+        
+    except Exception as e:
+        logger.error(f"Error in test_welcome command: {e}")
+        try:
+            await interaction.followup.send("❌ Failed to send test welcome. See logs.", ephemeral=True)
+        except:
+            # If even the followup fails, we can't do much
+            pass
 
 # -----------------------
 # Create embed modal & helper
 # -----------------------
 
-class CreateEmbedModal(discord.ui.Modal, title="Create Embed"):
+class CreateEmbedModal(discord.ui.Modal, title="Create Image Embeds"):
+    # Main embed fields (2 fields)
     title_input = discord.ui.TextInput(label="Title (optional)", style=discord.TextStyle.short, required=False, max_length=256)
     description_input = discord.ui.TextInput(label="Description (optional)", style=discord.TextStyle.paragraph, required=False, max_length=4000)
-    footer_input = discord.ui.TextInput(label="Footer (optional)", style=discord.TextStyle.short, required=False, max_length=2048)
-    extra_content_input = discord.ui.TextInput(label="Extra content (optional)", style=discord.TextStyle.paragraph, required=False, max_length=2000)
-    fields_input = discord.ui.TextInput(
-        label="Fields (name|value|inline)", style=discord.TextStyle.paragraph, required=False, max_length=2000
+    
+    # Image URLs for multiple embeds - COMBINED INTO 1 FIELD
+    images_input = discord.ui.TextInput(
+        label="Image URLs (one per line)", 
+        style=discord.TextStyle.paragraph, 
+        required=False, 
+        max_length=2000, 
+        placeholder="https://example.com/image1.jpg\nhttps://example.com/image2.jpg\nhttps://example.com/image3.jpg"
     )
+    
+    # Common fields (2 fields)
+    footer_input = discord.ui.TextInput(label="Footer text (optional)", style=discord.TextStyle.short, required=False, max_length=2048)
+    extra_content_input = discord.ui.TextInput(label="Message content (optional)", style=discord.TextStyle.paragraph, required=False, max_length=2000)
 
     def __init__(self, callback_data: dict):
         super().__init__()
@@ -345,15 +369,20 @@ class CreateEmbedModal(discord.ui.Modal, title="Create Embed"):
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
+        
+        # Parse multiple image URLs from the text area
+        image_urls = []
+        if self.images_input.value.strip():
+            image_urls = [url.strip() for url in self.images_input.value.split('\n') if url.strip()]
+        
         data = self.callback_data.copy()
         data.update({
             "title": self.title_input.value.strip(),
             "description": self.description_input.value.strip(),
+            "image_urls": image_urls,  # Use the parsed list
             "footer_text": self.footer_input.value.strip(),
-            "extra_content": self.extra_content_input.value.strip(),
-            "fields_raw": self.fields_input.value.strip()
+            "extra_content": self.extra_content_input.value.strip()
         })
-        # process creation
         try:
             await process_create_embed(interaction, data)
         except Exception as e:
@@ -379,18 +408,22 @@ def parse_color(s: str):
 # -----------------------
 # Helper: build embed from data (and parse fields)
 # -----------------------
-def build_embed_from_data(data: dict):
+def build_embed_from_data(data: dict, image_url: str = None):
     color = parse_color(data.get("color"))
+    
     embed = discord.Embed(
-        title=data.get("title") or discord.Embed.Empty,
-        description=data.get("description") or discord.Embed.Empty,
+        title=data.get("title") or None,  # CHANGED THIS LINE
+        description=data.get("description") or None,  # CHANGED THIS LINE
         color=color,
         timestamp=datetime.utcnow() if data.get("timestamp_on") else None
     )
+    
+    # Set image if provided
+    if image_url:
+        embed.set_image(url=image_url)
+    
     if data.get("thumbnail_url"):
         embed.set_thumbnail(url=data.get("thumbnail_url"))
-    if data.get("image_url"):
-        embed.set_image(url=data.get("image_url"))
     if data.get("author_name"):
         if data.get("author_icon_url"):
             embed.set_author(name=data.get("author_name"), icon_url=data.get("author_icon_url"))
@@ -402,18 +435,6 @@ def build_embed_from_data(data: dict):
         else:
             embed.set_footer(text=data.get("footer_text"))
 
-    fields_raw = data.get("fields_raw") or ""
-    if fields_raw:
-        lines = [l.strip() for l in fields_raw.splitlines() if l.strip()]
-        for i, line in enumerate(lines[:10]):
-            parts = line.split("|")
-            if len(parts) >= 2:
-                name = parts[0].strip()[:256]
-                value = parts[1].strip()[:1024]
-                inline = False
-                if len(parts) >= 3:
-                    inline = parts[2].strip().lower() in ("true","1","yes","y")
-                embed.add_field(name=name, value=value, inline=inline)
     return embed
 
 # -----------------------
@@ -429,24 +450,57 @@ async def process_create_embed(interaction: discord.Interaction, data: dict):
     if not target_channel:
         await interaction.followup.send("❌ Target channel not found.", ephemeral=True)
         return
-    embed = build_embed_from_data(data)
+    
+    # Build embeds
+    embeds = []
+    image_urls = data.get("image_urls", [])
+    
+    if image_urls:
+        # If we have images, create embeds for each image
+        for i, image_url in enumerate(image_urls):
+            if i == 0:  # First embed with title/description
+                embed = build_embed_from_data(data, image_url)
+            else:  # Additional embeds with only images
+                embed = discord.Embed(color=parse_color(data.get("color")))
+                embed.set_image(url=image_url)
+            embeds.append(embed)
+    else:
+        # If no images, create a single embed with just title/description
+        embed = build_embed_from_data(data)
+        embeds.append(embed)
+    
+    # Check if we have any content at all
+    has_content = any([
+        data.get("title"),
+        data.get("description"), 
+        data.get("footer_text"),
+        image_urls,
+        data.get("thumbnail_url"),
+        data.get("author_name")
+    ])
+    
+    if not has_content:
+        await interaction.followup.send("❌ No content provided. Add at least a title, description, or image.", ephemeral=True)
+        return
+    
     extra = data.get("extra_content") or None
     preview = data.get("preview", False)
 
     if preview:
         try:
             dm = await interaction.user.create_dm()
-            await dm.send(content=extra or None, embed=embed)
+            await dm.send(content=extra or None, embeds=embeds)
             await interaction.followup.send("✅ Preview sent to your DMs.", ephemeral=True)
         except discord.Forbidden:
             await interaction.followup.send("❌ Couldn't DM you (maybe DMs disabled).", ephemeral=True)
         return
 
+    # Send embeds to target channel
     try:
-        sent = await target_channel.send(content=extra or None, embed=embed)
+        sent = await target_channel.send(content=extra or None, embeds=embeds)
         sent_embeds[str(sent.id)] = {"guild_id": guild.id, "channel_id": target_channel.id}
         save_json(SENT_EMBEDS_FILE, sent_embeds)
-        await interaction.followup.send(f"✅ Embed sent to {target_channel.mention}", ephemeral=True)
+        await interaction.followup.send(f"✅ {len(embeds)} embed(s) sent to {target_channel.mention}", ephemeral=True)
     except discord.Forbidden:
         await interaction.followup.send("❌ I don't have permission to send messages in the target channel.", ephemeral=True)
     except Exception as e:
@@ -510,8 +564,25 @@ async def create_embed_cmd(interaction: discord.Interaction,
 # -----------------------
 @bot.tree.command(name="edit_embed", description="Edit an embed previously sent by the bot (admin only)")
 @app_commands.checks.has_permissions(administrator=True)
-@app_commands.describe(message_id="Message ID of the embed the bot sent", new_title="New title (optional)", new_description="New description (optional)")
-async def edit_embed(interaction: discord.Interaction, message_id: str, new_title: str = None, new_description: str = None):
+@app_commands.describe(
+    message_id="Message ID of the embed the bot sent", 
+    embed_index="Which embed to edit (starts from 1)", 
+    new_title="New title (use 'clear' to remove)",
+    new_description="New description (use 'clear' to remove)",
+    new_footer="New footer text (use 'clear' to remove)",
+    new_color="New color (hex like #ff00aa or name)",
+    new_image="New image URL (use 'clear' to remove)",
+    new_thumbnail="New thumbnail URL (use 'clear' to remove)",
+    new_author_name="New author name (use 'clear' to remove)",
+    new_author_icon="New author icon URL",
+    new_content="New message content (outside embed, use 'clear' to remove)"
+)
+async def edit_embed(interaction: discord.Interaction, message_id: str, embed_index: int = 1, 
+                    new_title: str = None, new_description: str = None, 
+                    new_footer: str = None, new_color: str = None,
+                    new_image: str = None, new_thumbnail: str = None,
+                    new_author_name: str = None, new_author_icon: str = None,
+                    new_content: str = None):
     info = sent_embeds.get(str(message_id))
     if not info:
         await interaction.response.send_message("❌ I don't have that message recorded as a sent embed.", ephemeral=True)
@@ -525,28 +596,234 @@ async def edit_embed(interaction: discord.Interaction, message_id: str, new_titl
     if not channel:
         await interaction.response.send_message("❌ Channel not found.", ephemeral=True)
         return
+    
+    if embed_index < 1:
+        await interaction.response.send_message("❌ Embed index must be at least 1.", ephemeral=True)
+        return
+    
+    # Validate URLs if provided
+    urls_to_validate = {
+        "Image URL": new_image,
+        "Thumbnail URL": new_thumbnail,
+        "Author icon URL": new_author_icon
+    }
+    
+    for url_name, url in urls_to_validate.items():
+        if url and url != "clear":
+            if not (url.startswith("http://") or url.startswith("https://")):
+                await interaction.response.send_message(f"❌ {url_name} must start with http:// or https://", ephemeral=True)
+                return
+    
     try:
         msg = await channel.fetch_message(int(message_id))
     except Exception:
         await interaction.response.send_message("❌ Could not fetch that message (it may have been deleted).", ephemeral=True)
         return
+    
     if not msg.embeds:
-        await interaction.response.send_message("❌ That message has no embed.", ephemeral=True)
+        await interaction.response.send_message("❌ That message has no embeds.", ephemeral=True)
         return
-    embed = msg.embeds[0]
-    if new_title is not None:
-        embed.title = new_title
-    if new_description is not None:
-        embed.description = new_description
+    
+    if embed_index > len(msg.embeds):
+        await interaction.response.send_message(f"❌ That message only has {len(msg.embeds)} embed(s).", ephemeral=True)
+        return
+    
+    embed = msg.embeds[embed_index - 1]
+    
+    # Create a new embed with the updated values
+    new_embed = discord.Embed(
+        title=new_title if new_title != "clear" else None if new_title is not None else embed.title,
+        description=new_description if new_description != "clear" else None if new_description is not None else embed.description,
+        color=parse_color(new_color) if new_color is not None else embed.color,
+        timestamp=embed.timestamp
+    )
+    
+    # Handle image
+    if new_image is not None:
+        if new_image == "clear":
+            new_embed.set_image(url=None)
+        else:
+            new_embed.set_image(url=new_image)
+    elif embed.image.url:
+        new_embed.set_image(url=embed.image.url)
+    
+    # Handle thumbnail
+    if new_thumbnail is not None:
+        if new_thumbnail == "clear":
+            new_embed.set_thumbnail(url=None)
+        else:
+            new_embed.set_thumbnail(url=new_thumbnail)
+    elif embed.thumbnail.url:
+        new_embed.set_thumbnail(url=embed.thumbnail.url)
+    
+    # Handle author
+    if new_author_name is not None:
+        if new_author_name == "clear":
+            new_embed.set_author(name=None, icon_url=None)
+        else:
+            author_icon = new_author_icon if new_author_icon is not None else (embed.author.icon_url if embed.author else None)
+            new_embed.set_author(name=new_author_name, icon_url=author_icon)
+    elif embed.author:
+        new_embed.set_author(name=embed.author.name, icon_url=embed.author.icon_url or None)
+    elif new_author_icon is not None:
+        # Only icon change requested but no author name exists
+        await interaction.response.send_message("❌ Cannot set author icon without author name. Use new_author_name parameter.", ephemeral=True)
+        return
+    
+    # Handle footer
+    if new_footer is not None:
+        if new_footer == "clear":
+            new_embed.set_footer(text=None, icon_url=None)
+        else:
+            new_embed.set_footer(text=new_footer, icon_url=embed.footer.icon_url if embed.footer else None)
+    elif embed.footer:
+        new_embed.set_footer(text=embed.footer.text, icon_url=embed.footer.icon_url or None)
+    
+    # Copy fields (since we don't have field editing in this command)
+    for field in embed.fields:
+        new_embed.add_field(name=field.name, value=field.value, inline=field.inline)
+    
+    # Create new list of embeds with the modified one
+    new_embeds = list(msg.embeds)
+    new_embeds[embed_index - 1] = new_embed
+    
+    # Handle message content
+    new_message_content = None
+    if new_content is not None:
+        new_message_content = None if new_content == "clear" else new_content
+    else:
+        new_message_content = msg.content
+    
     try:
-        await msg.edit(embed=embed)
-        await interaction.response.send_message("✅ Edited the embed.", ephemeral=True)
+        await msg.edit(content=new_message_content, embeds=new_embeds)
+        changes = []
+        if new_title is not None:
+            changes.append(f"title to '{new_title}'" if new_title != "clear" else "title")
+        if new_description is not None:
+            changes.append(f"description to '{new_description}'" if new_description != "clear" else "description")
+        if new_footer is not None:
+            changes.append(f"footer to '{new_footer}'" if new_footer != "clear" else "footer")
+        if new_color is not None:
+            changes.append(f"color to '{new_color}'")
+        if new_image is not None:
+            changes.append(f"image to '{new_image}'" if new_image != "clear" else "image")
+        if new_thumbnail is not None:
+            changes.append(f"thumbnail to '{new_thumbnail}'" if new_thumbnail != "clear" else "thumbnail")
+        if new_author_name is not None:
+            changes.append(f"author to '{new_author_name}'" if new_author_name != "clear" else "author")
+        if new_content is not None:
+            changes.append(f"content to '{new_content}'" if new_content != "clear" else "content")
+        
+        change_text = ", ".join(changes) if changes else "nothing (no changes specified)"
+        await interaction.response.send_message(f"✅ Edited embed #{embed_index}: {change_text}.", ephemeral=True)
     except discord.Forbidden:
         await interaction.response.send_message("❌ Missing permission to edit that message.", ephemeral=True)
     except Exception as e:
         logger.exception("Failed to edit embed")
         await interaction.response.send_message("❌ Failed to edit embed. See logs.", ephemeral=True)
 
+# Help
+
+@bot.tree.command(name="help", description="Show help guide for using this bot")
+async def help_command(interaction: discord.Interaction):
+    """Display a comprehensive help guide for all bot commands"""
+    
+    help_embed = discord.Embed(
+        title="🤖 Welcome Bot Help Guide",
+        description="Here's how to use all the features of this bot:",
+        color=0xDC143C
+    )
+    
+    # Welcome Commands
+    help_embed.add_field(
+        name="🎉 Welcome Message Commands",
+        value=(
+            "`/add_welcome [message]` - Add a custom welcome message\n"
+            "`/list_welcome` - View all welcome messages for this server\n"
+            "`/remove_welcome [index]` - Remove a welcome message by number\n"
+            "`/edit_welcome [index] [new_text]` - Edit a welcome message\n"
+            "`/test_welcome` - Test the welcome message (admin only)\n"
+            "**Placeholders:** `{mention}`, `{username}`, `{server}`"
+        ),
+        inline=False
+    )
+    
+    # Embed Creation Commands
+    help_embed.add_field(
+        name="🖼️ Embed Creation Commands",
+        value=(
+            "`/create_embed` - Create and send custom embeds with images\n"
+            "**Features:** Multiple images, titles, descriptions, footer, author\n"
+            "**Modal fields:** Title, Description, Image URLs (one per line), Footer, Message content"
+        ),
+        inline=False
+    )
+    
+    # Embed Editing Commands
+    help_embed.add_field(
+        name="✏️ Embed Editing Commands",
+        value=(
+            "`/edit_embed [message_id] [embed_index]` - Edit existing embeds\n"
+            "**Editable fields:** Title, Description, Footer, Color, Image, Thumbnail, Author, Message content\n"
+            "**Special:** Use `clear` to remove any field\n"
+            "**Example:** `/edit_embed message_id:123 embed_index:1 new_title:\"New Title\" new_image:clear`"
+        ),
+        inline=False
+    )
+    
+    # Mention Guide
+    help_embed.add_field(
+        name="📍 How to Mention Users/Roles",
+        value=(
+            "**In message content:** Use normal @mentions (`@username`)\n"
+            "**In embed text:** Use raw format (`<@USER_ID>` or `<@&ROLE_ID>`)\n"
+            "**Get IDs:** Enable Developer Mode → Right-click → Copy ID"
+        ),
+        inline=False
+    )
+    
+    # Image Guide
+    help_embed.add_field(
+        name="🖼️ Image Requirements",
+        value=(
+            "**Supported:** JPEG, PNG, GIF, WebP\n"
+            "**URLs must start with:** `http://` or `https://`\n"
+            "**Multiple images:** Enter one URL per line in the image field\n"
+            "**Max images per message:** 10 (Discord limit)"
+        ),
+        inline=False
+    )
+    
+    # Examples
+    help_embed.add_field(
+        name="📝 Examples",
+        value=(
+            "**Welcome message:** `Welcome {mention} to {server}!`\n"
+            "**Image URLs:** `https://example.com/image1.jpg` (one per line)\n"
+            "**Mention in content:** `@User check this out!`\n"
+            "**Mention in embed:** `<@123456789012345678>`"
+        ),
+        inline=False
+    )
+    
+    help_embed.set_footer(text="Need more help? Contact the server administrators")
+    
+    await interaction.response.send_message(embed=help_embed, ephemeral=True)
+
+# Optional: Add a simple help command for text too
+@bot.tree.command(name="quickhelp", description="Short help summary")
+async def quick_help(interaction: discord.Interaction):
+    """Short help summary"""
+    quick_help = """
+**🤖 Quick Commands:**
+• `/add_welcome` - Add welcome message
+• `/create_embed` - Create image embeds  
+• `/edit_embed` - Edit existing embeds
+• `/help` - Full detailed guide
+
+**🔧 Admin only:** Welcome commands and embed creation
+"""
+    await interaction.response.send_message(quick_help, ephemeral=True)
 # -----------------------
 # Run
 # -----------------------
@@ -562,6 +839,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
