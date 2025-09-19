@@ -101,7 +101,8 @@ class WelcomeBot(commands.Bot):
         intents.members = True
         intents.guilds = True
         intents.message_content = True
-        super().__init__(command_prefix=None, intents=intents, help_command=None)
+        # Slash-only bot: use a dummy callable prefix to prevent crashes
+        super().__init__(command_prefix=lambda bot, msg: [], intents=intents, help_command=None)
         self.config = Config()
         self.session = None
 
@@ -580,4 +581,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
