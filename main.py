@@ -331,17 +331,14 @@ async def test_welcome(interaction: discord.Interaction, member: discord.Member 
 # -----------------------
 # Create embed modal & helper
 # -----------------------
-class CreateEmbedModal(discord.ui.Modal, title="Create Embed - Additional Inputs"):
-    title_input = discord.ui.TextInput(label="Embed title (optional)", style=discord.TextStyle.short, required=False, max_length=256)
-    description_input = discord.ui.TextInput(label="Embed description (optional)", style=discord.TextStyle.paragraph, required=False, max_length=4096)
-    footer_input = discord.ui.TextInput(label="Footer text (optional)", style=discord.TextStyle.short, required=False, max_length=2048)
-    extra_content_input = discord.ui.TextInput(label="Message content (outside embed, mentions allowed)", style=discord.TextStyle.paragraph, required=False, max_length=2000)
+
+class CreateEmbedModal(discord.ui.Modal, title="Create Embed"):
+    title_input = discord.ui.TextInput(label="Title (optional)", style=discord.TextStyle.short, required=False, max_length=256)
+    description_input = discord.ui.TextInput(label="Description (optional)", style=discord.TextStyle.paragraph, required=False, max_length=4000)
+    footer_input = discord.ui.TextInput(label="Footer (optional)", style=discord.TextStyle.short, required=False, max_length=2048)
+    extra_content_input = discord.ui.TextInput(label="Extra content (optional)", style=discord.TextStyle.paragraph, required=False, max_length=2000)
     fields_input = discord.ui.TextInput(
-        label="Fields (one per line, format: name|value|inline True/False). Up to 10 fields.",
-        style=discord.TextStyle.paragraph,
-        required=False,
-        max_length=2000,
-        placeholder="Example:\nField 1|Value 1|True\nField 2|Value 2|False"
+        label="Fields (name|value|inline)", style=discord.TextStyle.paragraph, required=False, max_length=2000
     )
 
     def __init__(self, callback_data: dict):
@@ -358,11 +355,14 @@ class CreateEmbedModal(discord.ui.Modal, title="Create Embed - Additional Inputs
             "extra_content": self.extra_content_input.value.strip(),
             "fields_raw": self.fields_input.value.strip()
         })
+        # process creation
         try:
             await process_create_embed(interaction, data)
         except Exception as e:
             logger.exception("Failed to process embed creation")
             await interaction.followup.send("❌ Failed to create embed. See logs.", ephemeral=True)
+
+            
 # -----------------------
 # Helper: parse color hex or name
 # -----------------------
@@ -581,5 +581,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
