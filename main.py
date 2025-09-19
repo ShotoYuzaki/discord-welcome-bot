@@ -857,7 +857,7 @@ async def help_command(interaction: discord.Interaction):
             "`/list_welcome` - View all welcome messages for this server\n"
             "`/remove_welcome [index]` - Remove a welcome message by number\n"
             "`/edit_welcome [index] [new_text]` - Edit a welcome message\n"
-            "`/test_welcome` - Test the welcome message (admin only)\n"
+            "`/test_welcome` - Test the welcome message\n"
             "**Placeholders:** `{mention}`, `{username}`, `{server}`"
         ),
         inline=False
@@ -886,24 +886,67 @@ async def help_command(interaction: discord.Interaction):
         inline=False
     )
     
+    # DM Commands
+    help_embed.add_field(
+        name="📨 DM Commands",
+        value=(
+            "`/dm [member]` - Send messages or embeds to members\n"
+            "**Options:** Plain text, embed title, embed description, images/GIFs\n"
+            "**Examples:**\n"
+            "• `/dm member:@User message:\"Hello!\"` - Plain text\n"
+            "• `/dm member:@User title:\"News\" description:\"Update!\"` - Embed only\n"
+            "• `/dm member:@User image_url:\"https://example.com/image.gif\"` - Just GIF/image\n"
+            "• Mix and match any combination!"
+        ),
+        inline=False
+    )
+    
+    # Color Guide
+    help_embed.add_field(
+        name="🎨 Color Options",
+        value=(
+            "**Hex codes:** `#FF0000`, `FF0000`, `#F00`, `F00`\n"
+            "**Color names:** `red`, `yellow`, `blue`, `green`, `orange`, `purple`, `pink`\n"
+            "**Discord colors:** `blurple`, `discord_red`, `discord_green`\n"
+            "**RGB tuples:** `(255,0,0)`, `(100,200,50)`\n"
+            "**Over 100+ color names supported!**"
+        ),
+        inline=False
+    )
+    
+    # Media Guide
+    help_embed.add_field(
+        name="🖼️ Media Support",
+        value=(
+            "**Images:** JPEG, PNG, WebP\n"
+            "**GIFs:** Animated GIFs fully supported in embeds\n"
+            "**URLs must start with:** `http://` or `https://`\n"
+            "**Multiple images:** Enter one URL per line\n"
+            "**Max per message:** 10 images (Discord limit)"
+        ),
+        inline=False
+    )
+    
     # Mention Guide
     help_embed.add_field(
         name="📍 How to Mention Users/Roles",
         value=(
             "**In message content and embed text:** Use raw format (`<@USER_ID>` or `<@&ROLE_ID>`)\n"
-            "**Get IDs:** Enable Developer Mode → Right-click → Copy ID"
+            "**Get IDs:** Enable Developer Mode → Right-click → Copy ID\n"
+            "**Note:** Regular @mentions work in message content only"
         ),
         inline=False
     )
     
-    # Image Guide
+    # Usage Tips
     help_embed.add_field(
-        name="🖼️ Image Requirements",
+        name="💡 Pro Tips",
         value=(
-            "**Supported:** JPEG, PNG, GIF, WebP\n"
-            "**URLs must start with:** `http://` or `https://`\n"
-            "**Multiple images:** Enter one URL per line in the image field\n"
-            "**Max images per message:** 10 (Discord limit)"
+            "• Use `clear` to remove fields in `/edit_embed`\n"
+            "• GIFs work automatically in image URLs\n"
+            "• All commands are admin-only for security\n"
+            "• Mix text and embeds in `/dm` for rich messages\n"
+            "• Test welcome messages with `/test_welcome`"
         ),
         inline=False
     )
@@ -927,6 +970,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
