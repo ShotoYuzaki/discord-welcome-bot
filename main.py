@@ -508,23 +508,6 @@ async def create_embed_cmd(interaction: discord.Interaction,
         await interaction.response.send_message("❌ Failed to open modal. Try again.", ephemeral=True)
 
 # -----------------------
-# List sent embeds
-# -----------------------
-@bot.tree.command(name="list_embeds", description="List embeds sent by the bot in this guild (admin only)")
-@app_commands.checks.has_permissions(administrator=True)
-async def list_embeds(interaction: discord.Interaction):
-    guild_id = interaction.guild.id
-    out = []
-    for msg_id, info in sent_embeds.items():
-        if info.get("guild_id") == guild_id:
-            out.append(f"Message ID: {msg_id}, Channel ID: {info.get('channel_id')}")
-    if not out:
-        await interaction.response.send_message("No embeds recorded for this guild.", ephemeral=True)
-        return
-    text = "\n".join(out)
-    await interaction.response.send_message(f"📦 Sent embeds:\n{text}", ephemeral=True)
-
-# -----------------------
 # Edit embed
 # -----------------------
 @bot.tree.command(name="edit_embed", description="Edit an embed previously sent by the bot (admin only)")
@@ -581,6 +564,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
