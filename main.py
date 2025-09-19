@@ -69,7 +69,7 @@ sent_embeds = load_json(SENT_EMBEDS_FILE, {})
 # -----------------------
 WELCOME_CHANNELS = {
     1281605174556626994: 1410934962412195922,  # Guild A -> Channel A (My Server)
-    #991908158274539681: 991943909565550643,   # Guild B -> Channel B (Enchanted Squad)
+    991908158274539681: 991943909565550643,   # Guild B -> Channel B (Enchanted Squad)
 }
 
 def get_welcome_channel_id(guild_id: int):
@@ -391,19 +391,81 @@ class CreateEmbedModal(discord.ui.Modal, title="Create Image Embeds"):
 
             
 # -----------------------
-# Helper: parse color hex or name
+# Helper: parse color hex or name (IMPROVED VERSION)
 # -----------------------
 def parse_color(s: str):
     if not s:
-        return 0xDC143C
-    s = s.strip()
+        return 0xDC143C  # Default crimson
+    
+    s = s.strip().lower()
+    
+    # Remove # if present
     if s.startswith("#"):
         s = s[1:]
+    
+    # Try to parse as hex first
     try:
-        return int(s, 16)
-    except Exception:
-        names = {"red":0xFF0000, "green":0x00FF00, "blue":0x0000FF, "crimson":0xDC143C}
-        return names.get(s.lower(), 0xDC143C)
+        if len(s) == 6:  # Regular hex
+            return int(s, 16)
+        elif len(s) == 3:  # Short hex (like fff -> ffffff)
+            return int(s[0]*2 + s[1]*2 + s[2]*2, 16)
+    except ValueError:
+        pass  # Not a hex value, try color names
+    
+    # Extended color dictionary with common colors
+    color_dict = {
+        # Basic colors
+        "red": 0xFF0000, "green": 0x00FF00, "blue": 0x0000FF,
+        "yellow": 0xFFFF00, "orange": 0xFFA500, "purple": 0x800080,
+        "pink": 0xFFC0CB, "brown": 0xA52A2A, "black": 0x000000,
+        "white": 0xFFFFFF, "gray": 0x808080, "grey": 0x808080,
+        
+        # Discord colors
+        "blurple": 0x5865F2, "discord": 0x5865F2,
+        "crimson": 0xDC143C, "dark_theme": 0x36393F,
+        
+        # Additional common colors
+        "cyan": 0x00FFFF, "magenta": 0xFF00FF, "lime": 0x00FF00,
+        "maroon": 0x800000, "navy": 0x000080, "olive": 0x808000,
+        "teal": 0x008080, "silver": 0xC0C0C0, "gold": 0xFFD700,
+        "violet": 0xEE82EE, "indigo": 0x4B0082, "coral": 0xFF7F50,
+        "turquoise": 0x40E0D0, "salmon": 0xFA8072, "aqua": 0x00FFFF,
+        "fuchsia": 0xFF00FF, "khaki": 0xF0E68C, "lavender": 0xE6E6FA,
+        "plum": 0xDDA0DD, "orchid": 0xDA70D6, "azure": 0xF0FFFF,
+        "beige": 0xF5F5DC, "bisque": 0xFFE4C4, "chocolate": 0xD2691E,
+        "cornsilk": 0xFFF8DC, "firebrick": 0xB22222, "gainsboro": 0xDCDCDC,
+        "ghostwhite": 0xF8F8FF, "honeydew": 0xF0FFF0, "ivory": 0xFFFFF0,
+        "linen": 0xFAF0E6, "mintcream": 0xF5FFFA, "mistyrose": 0xFFE4E1,
+        "moccasin": 0xFFE4B5, "oldlace": 0xFDF5E6, "peru": 0xCD853F,
+        "seashell": 0xFFF5EE, "sienna": 0xA0522D, "snow": 0xFFFAFA,
+        "tan": 0xD2B48C, "thistle": 0xD8BFD8, "tomato": 0xFF6347,
+        "wheat": 0xF5DEB3, "whitesmoke": 0xF5F5F5,
+        
+        # Discord brand colors
+        "discord_red": 0xED4245, "discord_green": 0x57F287,
+        "discord_yellow": 0xFEE75C, "discord_blurple": 0x5865F2,
+        "discord_fuchsia": 0xEB459E, "discord_white": 0xFFFFFF,
+        "discord_black": 0x000000, "discord_gray": 0x36393F,
+    }
+    
+    # Try to find the color in the dictionary
+    if s in color_dict:
+        return color_dict[s]
+    
+    # Try to parse as RGB tuple (r,g,b)
+    if s.startswith("(") and s.endswith(")"):
+        try:
+            rgb = s[1:-1].split(",")
+            if len(rgb) == 3:
+                r = int(rgb[0].strip())
+                g = int(rgb[1].strip())
+                b = int(rgb[2].strip())
+                return (r << 16) + (g << 8) + b
+        except (ValueError, IndexError):
+            pass
+    
+    # Default to crimson if no valid color found
+    return 0xDC143C
 
 # -----------------------
 # Helper: build embed from data (and parse fields)
@@ -776,8 +838,7 @@ async def help_command(interaction: discord.Interaction):
     help_embed.add_field(
         name="📍 How to Mention Users/Roles",
         value=(
-            "**In message content:** Use normal @mentions (`@username`)\n"
-            "**In embed text:** Use raw format (`<@USER_ID>` or `<@&ROLE_ID>`)\n"
+            "**In message content and embed text:** Use raw format (`<@USER_ID>` or `<@&ROLE_ID>`)\n"
             "**Get IDs:** Enable Developer Mode → Right-click → Copy ID"
         ),
         inline=False
@@ -814,6 +875,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
