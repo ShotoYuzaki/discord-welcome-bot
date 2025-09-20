@@ -882,6 +882,74 @@ async def send_message(interaction: discord.Interaction, channel: discord.TextCh
         logger.error(f"Failed to send message: {e}")
         await interaction.response.send_message("❌ Failed to send message. See logs.", ephemeral=True)
 
+# -----------------------
+# Image Only Command (No Embed) with Reply
+# -----------------------
+@bot.tree.command(name="send_image", description="Send an image without embed (admin only)")
+@app_commands.checks.has_permissions(administrator=True)
+@app_commands.describe(
+    channel="Channel to send the image to",
+    image_url="URL of the image to send",
+    message="Optional text message with the image",
+    reply_to="Message ID to reply to (optional)"
+)
+async def send_image(interaction: discord.Interaction, channel: discord.TextChannel, image_url: str, message: str = None, reply_to: str = None):
+    try:
+        # Validate URL
+        if not (image_url.startswith("http://") or image_url.startswith("https://")):
+            await interaction.response.send_message("❌ Image URL must start with http:// or https://", ephemeral=True)
+            return
+        
+        # Prepare reply reference if provided
+        reply_reference = None
+        if reply_to:
+            try:
+                reply_message = await channel.fetch_message(int(reply_to))
+                reply_reference = discord.MessageReference(
+                    message_id=reply_message.id,
+                    channel_id=channel.id,
+                    guild_id=channel.guild.id,
+                    fail_if_not_exists=False
+                )
+            except:
+                await interaction.response.send_message("❌ Could not find the message to reply to", ephemeral=True)
+                return
+        
+        # Download the image
+        response = requests.get(image_url)
+        if response.status_code != 200:
+            await interaction.response.send_message("❌ Failed to download image from URL", ephemeral=True)
+            return
+        
+        # Get file extension from URL or content type
+        if image_url.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp')):
+            filename = f"image{os.path.splitext(image_url)[1]}"
+        else:
+            # Fallback to guessing from content type
+            content_type = response.headers.get('content-type', '')
+            if 'gif' in content_type:
+                filename = "image.gif"
+            elif 'png' in content_type:
+                filename = "image.png"
+            else:
+                filename = "image.jpg"
+        
+        # Send image without embed (just as attachment/content) with optional reply
+        file = discord.File(BytesIO(response.content), filename=filename)
+        
+        if reply_reference:
+            await channel.send(content=message, file=file, reference=reply_reference)
+        else:
+            await channel.send(content=message, file=file)
+        
+        await interaction.response.send_message(f"✅ Image sent to {channel.mention}", ephemeral=True)
+        
+    except discord.Forbidden:
+        await interaction.response.send_message("❌ I don't have permission to send messages in that channel", ephemeral=True)
+    except Exception as e:
+        logger.error(f"Failed to send image: {e}")
+        await interaction.response.send_message("❌ Failed to send image. See logs.", ephemeral=True)
+
 # Help
 
 @bot.tree.command(name="help", description="Show help guide for using this bot")
@@ -943,6 +1011,20 @@ async def help_command(interaction: discord.Interaction):
         ),
         inline=False
     )
+
+    # Image Commands
+    help_embed.add_field(
+        name="🖼️ Image Commands",
+        value=(
+            "`/send_image [channel] [image_url]` - Send image without embed\n"
+            "**Options:** Optional text message, reply to messages\n"
+            "**Supported formats:** JPEG, PNG, GIF, WebP\n"
+            "**URLs must start with:** `http://` or `https://`\n"
+            "**Use when:** You just want the image without any embed box"
+        ),
+        inline=False
+    )
+
 
     # DM Commands
     help_embed.add_field(
@@ -1028,6 +1110,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
