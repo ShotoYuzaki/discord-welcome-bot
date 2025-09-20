@@ -836,6 +836,52 @@ async def dm_combined(interaction: discord.Interaction, member: discord.Member,
         logger.error(f"Failed to send DM: {e}")
         await interaction.response.send_message("❌ Failed to send DM. See logs.", ephemeral=True)
 
+# -----------------------
+# Plain Text Message Command
+# -----------------------
+@bot.tree.command(name="message", description="Send a plain text message to a channel (admin only)")
+@app_commands.checks.has_permissions(administrator=True)
+@app_commands.describe(
+    channel="Channel to send the message to",
+    content="The text message to send",
+    reply_to="Message ID to reply to (optional)"
+)
+async def send_message(interaction: discord.Interaction, channel: discord.TextChannel, content: str, reply_to: str = None):
+    try:
+        # Validate content length
+        if len(content) > 2000:
+            await interaction.response.send_message("❌ Message too long (max 2000 characters)", ephemeral=True)
+            return
+        
+        # Prepare reply reference if provided
+        reply_reference = None
+        if reply_to:
+            try:
+                reply_message = await channel.fetch_message(int(reply_to))
+                reply_reference = discord.MessageReference(
+                    message_id=reply_message.id,
+                    channel_id=channel.id,
+                    guild_id=channel.guild.id,
+                    fail_if_not_exists=False
+                )
+            except:
+                await interaction.response.send_message("❌ Could not find the message to reply to", ephemeral=True)
+                return
+        
+        # Send the plain text message
+        if reply_reference:
+            sent = await channel.send(content, reference=reply_reference)
+        else:
+            sent = await channel.send(content)
+        
+        await interaction.response.send_message(f"✅ Message sent to {channel.mention}", ephemeral=True)
+        
+    except discord.Forbidden:
+        await interaction.response.send_message("❌ I don't have permission to send messages in that channel", ephemeral=True)
+    except Exception as e:
+        logger.error(f"Failed to send message: {e}")
+        await interaction.response.send_message("❌ Failed to send message. See logs.", ephemeral=True)
+
 # Help
 
 @bot.tree.command(name="help", description="Show help guide for using this bot")
@@ -885,7 +931,19 @@ async def help_command(interaction: discord.Interaction):
         ),
         inline=False
     )
-    
+
+    # Plain Text Commands
+    help_embed.add_field(
+        name="💬 Plain Text Messages",
+        value=(
+            "`/message [channel] [content]` - Send plain text messages\n"
+            "**Options:** Channel selection, reply to messages\n"
+            "**Features:** Full text formatting, mentions, emojis\n"
+            "**Use when:** You just need simple text without embeds"
+        ),
+        inline=False
+    )
+
     # DM Commands
     help_embed.add_field(
         name="📨 DM Commands",
@@ -970,6 +1028,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
